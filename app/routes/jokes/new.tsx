@@ -1,5 +1,7 @@
-import { LinksFunction } from '@remix-run/node';
+import type { ActionFunction, LinksFunction } from '@remix-run/node';
+import { redirect } from '@remix-run/node';
 
+import { db } from '~/utils/db.server';
 import stylesUrl from '~/styles/jokes.css';
 
 export const links: LinksFunction = () => {
@@ -11,11 +13,29 @@ export const links: LinksFunction = () => {
   ];
 };
 
+export const action: ActionFunction = async ({ request }) => {
+  const form = await request.formData();
+  const name = form.get('name');
+  const content = form.get('content');
+
+  if (typeof name !== 'string' || typeof content !== 'string') {
+    throw new Error(`Form not submitted correcly.`);
+  }
+
+  const joke = await db.joke.create({
+    data: {
+      name,
+      content,
+    },
+  });
+  return redirect(`/jokes/${joke.id}`);
+};
+
 export default function NewJokesRoute() {
   return (
     <div>
       <p>Add your own hilarious joke</p>
-      <form action='post'>
+      <form method='post'>
         <div>
           <label htmlFor='name'>
             Name:

@@ -1,4 +1,15 @@
-import React from 'react';
+import { LinksFunction } from '@remix-run/node';
+
+import stylesUrl from '~/styles/jokes.css';
+
+export const links: LinksFunction = () => {
+  return [
+    {
+      rel: 'stylesheet',
+      href: stylesUrl,
+    },
+  ];
+};
 
 export default function NewJokesRoute() {
   return (
@@ -22,7 +33,9 @@ export default function NewJokesRoute() {
             <textarea name='content' id='content' placeholder='Input content' />
           </label>
         </div>
-        <button type='submit'>Add</button>
+        <button type='submit' className='button'>
+          Add
+        </button>
       </form>
     </div>
   );

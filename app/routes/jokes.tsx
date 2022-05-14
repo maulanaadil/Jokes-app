@@ -4,6 +4,7 @@ import { Outlet, Link, useLoaderData } from '@remix-run/react';
 
 import stylesUrl from '~/styles/jokes.css';
 import { db } from '~/utils/db.server';
+import { getUser } from '~/utils/sessions.server';
 
 type Jokes = {
   id: string;
@@ -12,7 +13,8 @@ type Jokes = {
 };
 
 type LoaderData = {
-  jokoListItems: Array<Pick<Jokes, 'id' | 'name'>>;
+  user: Awaited<ReturnType<typeof getUser>>;
+  jokeListItems: Array<Pick<Jokes, 'id' | 'name'>>;
 };
 
 export const links: LinksFunction = () => {
@@ -24,19 +26,23 @@ export const links: LinksFunction = () => {
   ];
 };
 
-export const loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async ({ request }) => {
+  const jokeListItems = await db.joke.findMany({
+    take: 5,
+    select: { id: true, name: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  const user = await getUser(request);
+
   const data: LoaderData = {
-    jokoListItems: await db.joke.findMany({
-      take: 5,
-      select: { id: true, name: true },
-      orderBy: { createdAt: 'desc' },
-    }),
+    jokeListItems,
+    user,
   };
   return json(data);
 };
 
 export default function JoukesRoute() {
-  const { jokoListItems } = useLoaderData<LoaderData>();
+  const data = useLoaderData<LoaderData>();
   return (
     <div className='jokes-layout'>
       <header className='jokes-header'>
@@ -47,6 +53,18 @@ export default function JoukesRoute() {
               <span className='logo-medium'>😋</span>
             </Link>
           </h1>
+          {data.user ? (
+            <div className='user-info'>
+              <span>{`Hi ${data.user.username}`}</span>
+              <form action='/logout' method='post'>
+                <button type='submit' className='button'>
+                  Logout
+                </button>
+              </form>
+            </div>
+          ) : (
+            <Link to='/login'>Login</Link>
+          )}
         </div>
       </header>
 
@@ -56,7 +74,7 @@ export default function JoukesRoute() {
             <Link to='.'>Get a random joke</Link>
             <p>Here are a few more jokes to check out:</p>
             <ul>
-              {jokoListItems.map((joke) => (
+              {data.jokeListItems.map((joke) => (
                 <li key={joke.id}>
                   <Link to={joke.id}>{joke.name}</Link>
                 </li>

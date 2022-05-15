@@ -4,7 +4,7 @@ import type {
   LoaderFunction,
 } from '@remix-run/node';
 import { json, redirect } from '@remix-run/node';
-import { useActionData, useCatch, Link } from '@remix-run/react';
+import { useActionData, useCatch, Link, Form } from '@remix-run/react';
 
 import { db } from '~/utils/db.server';
 import { getUserId, requireUserId } from '~/utils/sessions.server';
@@ -111,7 +111,7 @@ export default function NewJokesRoute() {
   return (
     <div>
       <p>Add your own hilarious joke</p>
-      <form method='post'>
+      <Form method='post'>
         <div>
           <label>
             Name:{' '}
@@ -165,7 +165,7 @@ export default function NewJokesRoute() {
             Add
           </button>
         </div>
-      </form>
+      </Form>
     </div>
   );
 }

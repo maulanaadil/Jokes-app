@@ -1,4 +1,10 @@
-import { useLoaderData, Link, useParams, useCatch } from '@remix-run/react';
+import {
+  useLoaderData,
+  Link,
+  useParams,
+  useCatch,
+  Form,
+} from '@remix-run/react';
 import type {
   ActionFunction,
   LoaderFunction,
@@ -122,12 +128,12 @@ export default function JokeRoute() {
       <p>{joke.content}</p>
       <Link to='.'>{joke.name}</Link>
       {isOwner && (
-        <form method='post'>
+        <Form method='post'>
           <input type='hidden' name='_method' value='delete' />
           <button type='submit' className='button'>
             Delete
           </button>
-        </form>
+        </Form>
       )}
     </div>
   );

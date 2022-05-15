@@ -1,9 +1,13 @@
-import type { ActionFunction, LinksFunction } from '@remix-run/node';
+import type {
+  ActionFunction,
+  LinksFunction,
+  LoaderFunction,
+} from '@remix-run/node';
 import { json, redirect } from '@remix-run/node';
-import { useActionData } from '@remix-run/react';
+import { useActionData, useCatch, Link } from '@remix-run/react';
 
 import { db } from '~/utils/db.server';
-import { requireUserId } from '~/utils/sessions.server';
+import { getUserId, requireUserId } from '~/utils/sessions.server';
 import stylesUrl from '~/styles/jokes.css';
 
 type ActionData = {
@@ -41,6 +45,16 @@ export const links: LinksFunction = () => {
 
 const badRequest = (data: ActionData) => json(data, { status: 400 });
 
+export const loader: LoaderFunction = async ({ request }) => {
+  const userId = await getUserId(request);
+  if (!userId) {
+    throw new Response('Unauthorized', {
+      status: 401,
+    });
+  }
+  return json({});
+};
+
 export const action: ActionFunction = async ({ request }) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
@@ -69,6 +83,19 @@ export const action: ActionFunction = async ({ request }) => {
 
   return redirect(`/jokes/${joke.id}`);
 };
+
+export function CatchBoundary() {
+  const caught = useCatch();
+
+  if (caught.status === 401) {
+    return (
+      <div className='error-container'>
+        <p>You must be logged in to create a joke.</p>
+        <Link to='/login'>Login</Link>
+      </div>
+    );
+  }
+}
 
 export function ErrorBoundary() {
   return (

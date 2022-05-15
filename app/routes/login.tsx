@@ -113,6 +113,12 @@ export const action: ActionFunction = async ({ request }) => {
   }
 };
 
+export function ErrorBoundary() {
+  return (
+    <div className='error-container'>Sorry there was trouble on server.</div>
+  );
+}
+
 export default function Login() {
   const actionData = useActionData<ActionData>();
   const [searchParams] = useSearchParams();

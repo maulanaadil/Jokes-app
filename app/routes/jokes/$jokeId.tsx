@@ -1,10 +1,4 @@
-import {
-  useLoaderData,
-  Link,
-  useParams,
-  useCatch,
-  Form,
-} from '@remix-run/react';
+import { useLoaderData, useParams, useCatch } from '@remix-run/react';
 import type {
   ActionFunction,
   LoaderFunction,
@@ -12,6 +6,8 @@ import type {
 } from '@remix-run/node';
 import { json, redirect } from '@remix-run/node';
 import type { Joke } from '@prisma/client';
+
+import JokeDisplay from '~/components/joke';
 
 import { db } from '~/utils/db.server';
 import { getUserId, requireUserId } from '~/utils/sessions.server';
@@ -122,19 +118,5 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 export default function JokeRoute() {
   const { joke, isOwner } = useLoaderData();
-  return (
-    <div>
-      <p>Here's your hilarious joke:</p>
-      <p>{joke.content}</p>
-      <Link to='.'>{joke.name}</Link>
-      {isOwner && (
-        <Form method='post'>
-          <input type='hidden' name='_method' value='delete' />
-          <button type='submit' className='button'>
-            Delete
-          </button>
-        </Form>
-      )}
-    </div>
-  );
+  return <JokeDisplay joke={joke} isOwner={isOwner} />;
 }

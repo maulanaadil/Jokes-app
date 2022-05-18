@@ -18,8 +18,6 @@ async function seed() {
   );
 }
 
-seed();
-
 function getJokes() {
   return [
     {

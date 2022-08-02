@@ -36,6 +36,8 @@ type ActionData = {
   };
 };
 
+type ActionInput = z.TypeOf<typeof schema>;
+
 const badRequest = (data: ActionData) => json(data, { status: 400 });
 
 const schema = z.object({
@@ -48,8 +50,6 @@ const schema = z.object({
   loginType: z.string().optional(),
   redirectTo: z.string().default('/jokes'),
 });
-
-type ActionInput = z.TypeOf<typeof schema>;
 
 export const action: ActionFunction = async ({ request }) => {
   const { formData, errors } = await validationAction<ActionInput>({

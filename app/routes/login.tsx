@@ -3,12 +3,14 @@ import type {
   LinksFunction,
   MetaFunction,
 } from '@remix-run/node';
+import { z } from 'zod';
 import { json } from '@remix-run/node';
 import { useActionData, Link, useSearchParams, Form } from '@remix-run/react';
 
 import { db } from '~/utils/db.server';
 import { createUserSession, login, register } from '~/utils/sessions.server';
 import stylesUrl from '~/styles/login.css';
+import { validationAction } from '~/utils/validation.server';
 
 export const meta: MetaFunction = () => {
   return {
@@ -21,27 +23,6 @@ export const links: LinksFunction = () => {
   return [{ rel: 'stylesheet', href: stylesUrl }];
 };
 
-function validateUsername(username: unknown) {
-  if (typeof username !== 'string' || username.length < 3) {
-    return `Usernames must be at least 3 characters long`;
-  }
-}
-
-function validatePassword(password: unknown) {
-  if (typeof password !== 'string' || password.length < 6) {
-    return `Passwords must be at least 6 characters long`;
-  }
-}
-
-function validateUrl(url: any) {
-  console.log(url);
-  let urls = ['/jokes', '/', 'https://remix.run'];
-  if (urls.includes(url)) {
-    return url;
-  }
-  return '/jokes';
-}
-
 type ActionData = {
   formError?: string;
   fieldErrors?: {
@@ -49,38 +30,38 @@ type ActionData = {
     password: string | undefined;
   };
   fields?: {
-    loginType: string;
-    username: string;
-    password: string;
+    loginType: string | undefined;
+    username: string | undefined;
+    password: string | undefined;
   };
 };
 
+type ActionInput = z.TypeOf<typeof schema>;
+
 const badRequest = (data: ActionData) => json(data, { status: 400 });
 
+const schema = z.object({
+  username: z
+    .string({ required_error: 'Username is required' })
+    .min(3, 'Username must be at least 3 characters long'),
+  password: z
+    .string({ required_error: 'Password is required' })
+    .min(6, 'Password must be at least 6 characters long'),
+  loginType: z.string().optional(),
+  redirectTo: z.string().default('/jokes'),
+});
+
 export const action: ActionFunction = async ({ request }) => {
-  const form = await request.formData();
-  const loginType = form.get('loginType');
-  const username = form.get('username');
-  const password = form.get('password');
-  const redirectTo = validateUrl(form.get('redirectTo') || '/jokes');
-  if (
-    typeof loginType !== 'string' ||
-    typeof username !== 'string' ||
-    typeof password !== 'string' ||
-    typeof redirectTo !== 'string'
-  ) {
-    return badRequest({
-      formError: `Form not submitted correctly.`,
-    });
+  const { formData, errors } = await validationAction<ActionInput>({
+    request,
+    schema,
+  });
+
+  if (errors) {
+    return json({ fieldErrors: errors }, { status: 400 });
   }
 
-  const fields = { loginType, username, password };
-  const fieldErrors = {
-    username: validateUsername(username),
-    password: validatePassword(password),
-  };
-  if (Object.values(fieldErrors).some(Boolean))
-    return badRequest({ fieldErrors, fields });
+  const { username, password, redirectTo, loginType } = formData;
 
   switch (loginType) {
     case 'login': {
@@ -88,7 +69,7 @@ export const action: ActionFunction = async ({ request }) => {
 
       if (!user) {
         return badRequest({
-          fields,
+          fields: { username, loginType, password },
           formError: `Username/Password combination is incorrect`,
         });
       }
@@ -101,14 +82,14 @@ export const action: ActionFunction = async ({ request }) => {
       });
       if (userExists) {
         return badRequest({
-          fields,
+          fields: { username, loginType, password },
           formError: `User with username ${username} already exists`,
         });
       }
       const user = await register({ username, password });
       if (!user) {
         return badRequest({
-          fields,
+          fields: { username, loginType, password },
           formError: `Something wrong trying to create a new user`,
         });
       }
@@ -117,7 +98,7 @@ export const action: ActionFunction = async ({ request }) => {
     }
     default: {
       return badRequest({
-        fields,
+        fields: { username, loginType, password },
         formError: `Login type invalid`,
       });
     }

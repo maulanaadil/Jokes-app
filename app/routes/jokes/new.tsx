@@ -3,12 +3,14 @@ import type {
   LinksFunction,
   LoaderFunction,
 } from '@remix-run/node';
+import { z } from 'zod';
 import { json, redirect } from '@remix-run/node';
 import { useActionData, useCatch, Link, Form } from '@remix-run/react';
 
 import { db } from '~/utils/db.server';
 import { getUserId, requireUserId } from '~/utils/sessions.server';
 import stylesUrl from '~/styles/jokes.css';
+import { validationAction } from '~/utils/validation.server';
 
 type ActionData = {
   formError?: string;
@@ -22,17 +24,7 @@ type ActionData = {
   };
 };
 
-function validateJokeContent(content: string) {
-  if (content.length < 10) {
-    return `That joke is too short`;
-  }
-}
-
-function validateJokeName(name: string) {
-  if (name.length < 3) {
-    return `That joke's name is too short`;
-  }
-}
+type ActionInput = z.TypeOf<typeof schema>;
 
 export const links: LinksFunction = () => {
   return [
@@ -42,8 +34,6 @@ export const links: LinksFunction = () => {
     },
   ];
 };
-
-const badRequest = (data: ActionData) => json(data, { status: 400 });
 
 export const loader: LoaderFunction = async ({ request }) => {
   const userId = await getUserId(request);
@@ -55,27 +45,29 @@ export const loader: LoaderFunction = async ({ request }) => {
   return json({});
 };
 
+const schema = z.object({
+  name: z
+    .string({ required_error: 'Name is required' })
+    .min(3, `That joke's name is too short`),
+  content: z
+    .string({ required_error: 'Content is required' })
+    .min(10, `That joke is too short`),
+});
+
 export const action: ActionFunction = async ({ request }) => {
   const userId = await requireUserId(request);
-  const form = await request.formData();
-  const name = form.get('name');
-  const content = form.get('content');
+  const { formData, errors } = await validationAction<ActionInput>({
+    request,
+    schema,
+  });
 
-  if (typeof name !== 'string' || typeof content !== 'string') {
-    return badRequest({
-      formError: `Form not submitted correctly.`,
-    });
+  if (errors) {
+    return json({ fieldErrors: errors }, { status: 400 });
   }
 
-  const fieldErrors = {
-    name: validateJokeName(name),
-    content: validateJokeContent(content),
-  };
+  const { name, content } = formData;
 
   const fields = { name, content };
-  if (Object.values(fieldErrors).some(Boolean)) {
-    return badRequest({ fieldErrors, fields });
-  }
 
   const joke = await db.joke.create({
     data: { ...fields, jokesterId: userId },
